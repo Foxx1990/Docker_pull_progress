@@ -11,8 +11,8 @@ import requests
 import time
 import os
 
-IMAGE_NAME = 'debian'
-IMAGE_TAG = ''
+IMAGE_NAME = 'ubuntu/jre'
+IMAGE_TAG = '8-22.04_edge'
 JSON_FILE_PATH = 'docker_pull_status.json'
 
 def pull_image(image_name, image_tag):
@@ -24,6 +24,7 @@ def pull_image(image_name, image_tag):
 
 def monitor_pull(response):
     total_bytes = 0
+    total_progress = 0
     start_time = time.time()
     last_bytes = 0
 
@@ -35,19 +36,21 @@ def monitor_pull(response):
                 total = data['progressDetail'].get('total', 0)
 
                 if total > 0:
-                    total_bytes = total
-                    current_bytes = current
-                    percentage = (current_bytes / total_bytes) * 100
-                    speed = (current_bytes - last_bytes) / (time.time() - start_time) if start_time != time.time() else 0
-                    remaining_time = (total_bytes - current_bytes) / speed if speed > 0 else 0
+                    # Zaktualizuj całkowity postęp
+                    total_bytes += total
+                    total_progress += current
+                    
+                    percentage = (total_progress / total_bytes) * 100 if total_bytes > 0 else 0
+                    speed = (total_progress - last_bytes) / (time.time() - start_time) if start_time != time.time() else 0
+                    remaining_time = (total_bytes - total_progress) / speed if speed > 0 else 0
 
-                    last_bytes = current_bytes
+                    last_bytes = total_progress
                     start_time = time.time()
 
                     status_data = {
-                        'current_bytes': current_bytes,
+                        'current_bytes': total_progress,
                         'total_bytes': total_bytes,
-                        'percentage': round(percentage, 1),
+                        'percentage': round(percentage, 2),
                         'speed': round(speed, 2),
                         'remaining_time': round(remaining_time)
                     }
